@@ -9,9 +9,12 @@
 - JDBC
 
 ## Запуск
-1. Создать базу данных `task_tracker`
-2. Настроить `application.properties`
-3. `mvn clean compile exec:java`
+
+1. Убедитесь, что PostgreSQL запущен, и создана база `task_tracker`
+2. Скопируйте `application.properties.example` в `application.properties` и укажите свои пароль/пользователя
+3. Выполните в терминале:
+   ```bash
+   mvn compile exec:java -Dexec.mainClass="com.todo.app.Main"
 
 ## Функции
 - Добавление задач

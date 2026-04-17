@@ -1,3 +1,4 @@
-db.url=jdbc:postgresql://localhost:5432/YourDatabaseName
-db.user=YourUsernameInPostgreSQL
-db.password=YourPassword
+spring.datasource.url=jdbc:postgresql://localhost:5432/YourDatabase
+spring.datasource.username=YourUsername
+spring.datasource.password=YourPassword
+spring.jpa.hibernate.ddl-auto=validate

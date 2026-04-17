@@ -2,17 +2,15 @@ package com.todo.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-/**
- * DTO класс для обновления полей задачи (Task).
- */
 @Data
-public class TaskUpdateRequest
-{
-    @NotBlank
+public class TaskCreateRequest {
+    @NotBlank(message = "title is required")
+    @Size(min = 1, max = 255)
     private String title;
     private String description;
-    @NotNull
+    @NotNull(message = "done is required")
     private Boolean done;
 }
