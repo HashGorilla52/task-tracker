@@ -1,13 +1,12 @@
-# Task Tracker
+# Task Tracker (Console version)
 
 Консольное приложение для управления задачами.
 
 ## Технологии
 - Java 21
-- Spring Boot
-- JPA Hibernate
 - Maven
 - PostgreSQL
+- JDBC
 
 ## Запуск
 
