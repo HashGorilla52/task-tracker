@@ -1,6 +1,7 @@
 package com.todo.service;
 
 import com.todo.dto.TaskCreateRequest;
+import com.todo.dto.TaskCursorPage;
 import com.todo.dto.TaskResponse;
 import com.todo.dto.TaskUpdateRequest;
 import com.todo.exception.ResourceAlreadyExistsException;
@@ -9,9 +10,16 @@ import com.todo.model.TaskEntity;
 import com.todo.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Сервис для работы с задачами.
@@ -25,7 +33,7 @@ public class TaskService {
     /**
      * Метод для преобразования сущности jpa в объект DTO TaskResponse.
      * @param entity сущность TaskEntity
-     * @return TaskResponce объект.
+     * @return TaskResponse объект.
      */
     private TaskResponse toResponse(TaskEntity entity) {
         TaskResponse response = new TaskResponse();
@@ -63,7 +71,7 @@ public class TaskService {
             creatingEntity.setDone(request.getDone());
         }
 
-        TaskEntity createdEntity = new TaskEntity();
+        TaskEntity createdEntity;
         try {
             createdEntity = taskRepository.save(creatingEntity);
         }
@@ -74,21 +82,28 @@ public class TaskService {
         return toResponse(createdEntity);
     }
 
-
-    // Переделать со Stream API
     /**
      * Метод для получения всех задач из БД.
      * @return список всех задач.
      */
-    public List<TaskResponse> getAllTasks() {
-        List<TaskEntity> entities = taskRepository.findAll();
-        List<TaskResponse> responses = new ArrayList<>();
+    public Page<TaskResponse> getTasksPage(Pageable pageable) {
+       return taskRepository.findAll(pageable).map(this::toResponse);
+    }
 
-        for (TaskEntity entity : entities) {
-           responses.add(toResponse(entity));
-        }
+    /**
+     * Метод для получения страницы с задачами размером, передаваемым в объекте Pageable, начиная с
+     * задачи, следующей за задачей с id, равным lastId; реализует keyset/cursor пагинацию.
+     * @param lastId - id последней задачи
+     * @param pageable - объект, хранящий размер желаемой страницы
+     * @return - объект со списком задач и курсор(id последней задачи)
+     */
+    public TaskCursorPage getTasksWithCursor(Long lastId, Pageable pageable) {
+        List<TaskResponse> tasks = taskRepository.findNextPage(lastId, pageable).
+                stream().map(this::toResponse).toList();
+        Long nextCursor = tasks.size() == pageable.getPageSize()
+                ? tasks.get(tasks.size() - 1).getId() : null;
 
-        return responses;
+        return new TaskCursorPage(tasks, nextCursor);
     }
 
     /**
