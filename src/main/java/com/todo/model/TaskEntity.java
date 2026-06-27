@@ -1,10 +1,10 @@
 package com.todo.model;
 
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "tasks")
@@ -22,14 +22,14 @@ public class TaskEntity {
     private String title;
 
     @Column (name = "description")
-    @Nullable
     private String description;
 
     @Column (name = "is_done", nullable = false)
     private boolean done;
 
+    @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     public TaskEntity() {}
 }

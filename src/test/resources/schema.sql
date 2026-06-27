@@ -1,0 +1,11 @@
+CREATE SEQUENCE IF NOT EXISTS tasks_id_seq START WITH 1 INCREMENT BY 1;
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id BIGINT PRIMARY KEY default nextval('tasks_id_seq'),
+    title VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    is_done BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+

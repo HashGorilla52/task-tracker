@@ -6,20 +6,19 @@ import com.todo.dto.TaskResponse;
 import com.todo.dto.TaskUpdateRequest;
 import com.todo.exception.ResourceAlreadyExistsException;
 import com.todo.exception.ResourceNotFoundException;
+import com.todo.exception.ValidationException;
 import com.todo.model.TaskEntity;
 import com.todo.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
 
 /**
  * Сервис для работы с задачами.
@@ -55,6 +54,8 @@ public class TaskService {
 
     /**
      * Метод для создания задачи.
+     * @param request - dto объект с полями для запроса на создание задачи,
+     *                в случае невалидности данных вместе с ответом возвращает список ошибок.
      * @return создаваемую задачу.
      */
     public TaskResponse createTask(TaskCreateRequest request) {
@@ -98,10 +99,18 @@ public class TaskService {
      * @return - объект со списком задач и курсор(id последней задачи)
      */
     public TaskCursorPage getTasksWithCursor(Long lastId, Pageable pageable) {
-        List<TaskResponse> tasks = taskRepository.findNextPage(lastId, pageable).
+        int pageSize = pageable.getPageSize();
+        int noOffset = 0;
+
+        Pageable nextPageable = PageRequest.of(noOffset, pageSize + 1, pageable.getSort());
+        List<TaskResponse> tasks = taskRepository.findNextPage(lastId, nextPageable).
                 stream().map(this::toResponse).toList();
-        Long nextCursor = tasks.size() == pageable.getPageSize()
-                ? tasks.get(tasks.size() - 1).getId() : null;
+
+        Long nextCursor = null;
+        if (tasks.size() == pageSize + 1){
+            tasks = tasks.subList(0, pageSize);
+            nextCursor = tasks.get(pageSize - 1).getId();
+        }
 
         return new TaskCursorPage(tasks, nextCursor);
     }
@@ -125,10 +134,18 @@ public class TaskService {
      */
     public TaskResponse updateTask(long id, TaskUpdateRequest request) {
 
-        TaskEntity entity = taskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
+        Map<String, String> errors = new HashMap<>();
+
+        TaskEntity entity = taskRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("Task with id " + id + " not found"));
 
         if (request.getTitle() != null) {
-            entity.setTitle(request.getTitle());
+            if (request.getTitle().isBlank() || request.getTitle().length() > 255) {
+                errors.put("title", "title must be between 1 and 255 characters");
+            }
+            else {
+                entity.setTitle(request.getTitle());
+            }
         }
         if (request.getDescription() != null) {
             entity.setDescription(request.getDescription());
@@ -137,16 +154,18 @@ public class TaskService {
             entity.setDone(request.getDone());
         }
 
-        TaskEntity updatedEntity = new TaskEntity();
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+
         try {
-            updatedEntity = taskRepository.save(entity);
+            taskRepository.save(entity);
         }
         catch (DataIntegrityViolationException e) {
             throw new ResourceAlreadyExistsException("Can't update task with id " + id + ", title is already in use");
         }
 
-
-        return toResponse(updatedEntity);
+        return toResponse(entity);
     }
 
     /**
@@ -155,7 +174,8 @@ public class TaskService {
      * @return удалённая задача в TaskResponse.
      */
     public TaskResponse removeTaskById(long id) {
-        TaskEntity entity = taskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
+        TaskEntity entity = taskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(
+                "Task with id " + id + " not found"));
         taskRepository.delete(entity);
         return toResponse(entity);
     }
