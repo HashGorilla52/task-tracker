@@ -1,11 +1,5 @@
 package com.todo.dto;
 
-import lombok.Data;
-
 import java.util.List;
 
-@Data
-public class TaskCursorPage {
-    private final List<TaskResponse> tasks;
-    private final Long nextCursor;
-}
+public record TaskCursorPage(List<TaskResponse> tasks, Long nextCursor) {}

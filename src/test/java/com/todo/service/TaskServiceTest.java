@@ -44,17 +44,14 @@ public class TaskServiceTest {
     public void createTask_ShouldReturnTask_WhenDataIsValid()
     {
         // GIVEN
-        TaskCreateRequest request = new TaskCreateRequest();
-        request.setTitle("Title");
-        request.setDescription("Description");
-        request.setDone(true);
+        TaskCreateRequest request = new TaskCreateRequest("Title", "Description", true);
 
         long id = 1;
         TaskEntity savedEntity = new TaskEntity();
         savedEntity.setId(id);
-        savedEntity.setTitle(request.getTitle());
-        savedEntity.setDescription(request.getDescription());
-        savedEntity.setDone(request.getDone());
+        savedEntity.setTitle(request.title());
+        savedEntity.setDescription(request.description());
+        savedEntity.setDone(request.done());
 
         when(mockRepository.save(any(TaskEntity.class))).thenReturn(savedEntity);
 
@@ -62,11 +59,11 @@ public class TaskServiceTest {
         TaskResponse result = service.createTask(request);
 
         // THEN
-        assertThat(result.getId()).isEqualTo(savedEntity.getId());
-        assertThat(result.getTitle()).isEqualTo(request.getTitle());
-        assertThat(result.getDescription()).isEqualTo(request.getDescription());
-        assertThat(result.isDone()).isEqualTo(request.getDone());
-        assertThat(result.getCreatedAt()).isEqualTo(savedEntity.getCreatedAt());
+        assertThat(result.id()).isEqualTo(savedEntity.getId());
+        assertThat(result.title()).isEqualTo(request.title());
+        assertThat(result.description()).isEqualTo(request.description());
+        assertThat(result.done()).isEqualTo(request.done());
+        assertThat(result.createdAt()).isEqualTo(savedEntity.getCreatedAt());
 
         verify(mockRepository).save(any(TaskEntity.class));
     }
@@ -75,10 +72,7 @@ public class TaskServiceTest {
     public void createTask_ShouldThrowException_WhenTaskAlreadyExists()
     {
         // GIVEN
-        TaskCreateRequest request = new TaskCreateRequest();
-        request.setTitle("Duplicate Title");
-        request.setDescription("Description");
-        request.setDone(true);
+        TaskCreateRequest request = new TaskCreateRequest("Duplicate Title", "Description", true);
 
         when(mockRepository.save(any(TaskEntity.class))).thenThrow(new DataIntegrityViolationException("title already in use"));
 
@@ -98,7 +92,7 @@ public class TaskServiceTest {
         TaskResponse result = service.getTaskById(id);
 
         // THEN
-        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.id()).isEqualTo(id);
     }
 
     @Test
@@ -151,7 +145,7 @@ public class TaskServiceTest {
             // THEN
             assertThat(result.getContent()).hasSize(pageSize);
             assertThat(result.getTotalPages()).isEqualTo(totalPages);
-            assertThat(result.getContent()).extracting(TaskResponse::getId).containsExactlyElementsOf(lastPage
+            assertThat(result.getContent()).extracting(TaskResponse::id).containsExactlyElementsOf(lastPage
                     .stream().map(TaskEntity::getId).collect(Collectors.toList()));
         }
 
@@ -188,10 +182,10 @@ public class TaskServiceTest {
             TaskCursorPage result = service.getTasksWithCursor(lastId, pageable);
 
             // THEN
-            assertThat(result.getTasks()).hasSize(limit);
-            assertThat(result.getTasks()).extracting(TaskResponse::getId)
+            assertThat(result.tasks()).hasSize(limit);
+            assertThat(result.tasks()).extracting(TaskResponse::id)
                     .containsExactlyElementsOf(expectedPage.stream().map(TaskEntity::getId).collect(Collectors.toList()));
-            assertThat(result.getNextCursor()).isEqualTo(nextCursor);
+            assertThat(result.nextCursor()).isEqualTo(nextCursor);
 
         }
 
@@ -210,10 +204,10 @@ public class TaskServiceTest {
             TaskCursorPage result = service.getTasksWithCursor(lastId, pageable);
 
             // THEN
-            assertThat(result.getTasks()).hasSize(limit);
-            assertThat(result.getTasks()).extracting(TaskResponse::getId)
+            assertThat(result.tasks()).hasSize(limit);
+            assertThat(result.tasks()).extracting(TaskResponse::id)
                     .containsExactlyElementsOf(expectedPage.stream().map(TaskEntity::getId).collect(Collectors.toList()));
-            assertThat(result.getNextCursor()).isEqualTo(null);
+            assertThat(result.nextCursor()).isEqualTo(null);
         }
 
         @Test
@@ -232,8 +226,8 @@ public class TaskServiceTest {
             TaskCursorPage result = service.getTasksWithCursor(lastId, pageable);
 
             // THEN
-            assertThat(result.getTasks()).isEmpty();
-            assertThat(result.getNextCursor()).isEqualTo(null);
+            assertThat(result.tasks()).isEmpty();
+            assertThat(result.nextCursor()).isEqualTo(null);
         }
     }
 
@@ -241,7 +235,7 @@ public class TaskServiceTest {
     public void updateTask_ShouldThrowException_WhenTaskDoesNotExist(){
         // GIVEN
         long id = 999L;
-        TaskUpdateRequest request = new TaskUpdateRequest();
+        TaskUpdateRequest request = new TaskUpdateRequest("title", null, null);
 
         when(mockRepository.findById(id)).thenThrow(new ResourceNotFoundException("Task with id " + id + " not found"));
 
@@ -257,10 +251,7 @@ public class TaskServiceTest {
         String newDescription = "description";
         boolean newDone = true;
 
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle(newTitle);
-        request.setDescription(newDescription);
-        request.setDone(newDone);
+        TaskUpdateRequest request = new TaskUpdateRequest(newTitle, newDescription, newDone);
 
         TaskEntity task = new TaskEntity();
         task.setId(id);
@@ -278,9 +269,9 @@ public class TaskServiceTest {
         TaskResponse result = service.updateTask(id, request);
 
         // THEN
-        assertThat(result.getTitle()).isEqualTo(updatedTask.getTitle());
-        assertThat(result.getDescription()).isEqualTo(updatedTask.getDescription());
-        assertThat(result.isDone()).isEqualTo(updatedTask.isDone());
+        assertThat(result.title()).isEqualTo(updatedTask.getTitle());
+        assertThat(result.description()).isEqualTo(updatedTask.getDescription());
+        assertThat(result.done()).isEqualTo(updatedTask.isDone());
     }
 
     @Test
@@ -288,8 +279,7 @@ public class TaskServiceTest {
         // GIVEN
         long id = 1L;
         TaskEntity task = new TaskEntity();
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle("duplicate title");
+        TaskUpdateRequest request = new TaskUpdateRequest("duplicate title", null, null);
         when(mockRepository.findById(id)).thenReturn(Optional.of(task));
         when(mockRepository.save(task)).thenThrow(DataIntegrityViolationException.class);
 
@@ -303,8 +293,8 @@ public class TaskServiceTest {
         long id = 1L;
         TaskEntity task = new TaskEntity();
         task.setId(id);
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle(""); // передаём некорректное название задачи для обновления, ожидается ValidationException
+        TaskUpdateRequest request = new TaskUpdateRequest("", null, null);
+        // передаём некорректное название задачи для обновления, ожидается ValidationException
         when(mockRepository.findById(id)).thenReturn(Optional.of(task));
 
         // WHEN & THEN
@@ -330,7 +320,7 @@ public class TaskServiceTest {
         when(mockRepository.findById(id)).thenReturn(Optional.of(task));
 
         // WHEN & THEN
-        assertThat(service.removeTaskById(id)).extracting(TaskResponse::getId).isEqualTo(id);
+        assertThat(service.removeTaskById(id)).extracting(TaskResponse::id).isEqualTo(id);
         verify(mockRepository).delete(task);
     }
 }

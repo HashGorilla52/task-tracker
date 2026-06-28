@@ -57,17 +57,15 @@ public class TaskControllerTest {
     @Test
     public void createTask_ShouldReturnCreatedTask_WhenRequestIsValid() throws Exception {
         //GIVEN
-        TaskCreateRequest request = new TaskCreateRequest();
-        request.setTitle("title");
-        request.setDescription("description");
-        request.setDone(true);
+        TaskCreateRequest request = new TaskCreateRequest("title", "description", true);
 
-        TaskResponse response = new TaskResponse();
-        response.setId(1L);
-        response.setTitle(request.getTitle());
-        response.setDescription(request.getDescription());
-        response.setDone(request.getDone());
-        response.setCreatedAt(LocalDateTime.now());
+        TaskResponse response = new TaskResponse(
+                1L,
+                request.title(),
+                request.description(),
+                request.done(),
+                LocalDateTime.now()
+                );
 
         when(mockService.createTask(any(TaskCreateRequest.class))).thenReturn(response);
 
@@ -78,16 +76,13 @@ public class TaskControllerTest {
                 .andExpect(header().string("Content-Type", "application/json"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.title").value(response.getTitle()));
+                .andExpect(jsonPath("$.title").value(response.title()));
     }
 
     @Test
     public void createTask_ShouldReturnProblemDetail_WhenRequestIsInvalid() throws Exception {
         // GIVEN
-        TaskCreateRequest invalidRequest = new TaskCreateRequest();
-        invalidRequest.setTitle("");
-        invalidRequest.setDescription("description");
-        invalidRequest.setDone(null);
+        TaskCreateRequest invalidRequest = new TaskCreateRequest("",  "description", null);
 
         // WHEN & THEN
         mockMvc.perform(post("/api/tasks")
@@ -107,12 +102,13 @@ public class TaskControllerTest {
     public void getTaskById_ShouldReturnTask_WhenTaskExists() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskResponse response = new TaskResponse();
-        response.setId(1L);
-        response.setTitle("title");
-        response.setDescription("description");
-        response.setDone(true);
-        response.setCreatedAt(LocalDateTime.now());
+        TaskResponse response = new TaskResponse(
+                1L,
+                "title",
+                "description",
+                true,
+                LocalDateTime.now()
+                );
 
         when(mockService.getTaskById(id)).thenReturn(response);
 
@@ -122,9 +118,9 @@ public class TaskControllerTest {
                 .andExpect(header().string("Content-Type", "application/json"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.title").value(response.getTitle()))
-                .andExpect(jsonPath("$.description").value(response.getDescription()))
-                .andExpect(jsonPath("$.done").value(response.isDone()))
+                .andExpect(jsonPath("$.title").value(response.title()))
+                .andExpect(jsonPath("$.description").value(response.description()))
+                .andExpect(jsonPath("$.done").value(response.done()))
                 .andExpect(jsonPath("$.createdAt").exists());
     }
 
@@ -158,8 +154,13 @@ public class TaskControllerTest {
         void setUp(){
             this.tasks = ids.stream()
                     .map(id -> {
-                        TaskResponse task = new TaskResponse();
-                        task.setId(id);
+                        TaskResponse task = new TaskResponse(
+                                id,
+                                "title" + id,
+                                "",
+                                false,
+                                LocalDateTime.now()
+                                );
                         return task;
                     }).toList();
 
@@ -195,7 +196,7 @@ public class TaskControllerTest {
                     .andExpect(jsonPath("$.last").value(expectedPage.isLast()))
                     .andExpect(jsonPath("$.content.length()").value(expectedTasks.size()))
                     .andExpect(jsonPath("$.content[*].id", containsInAnyOrder(expectedTasks.stream()
-                            .map(TaskResponse::getId)
+                            .map(TaskResponse::id)
                             .map(Long::intValue)
                             .toArray())));
         }
@@ -234,7 +235,7 @@ public class TaskControllerTest {
             Long lastId = null;
 
             List<TaskResponse> expectedTasks = tasks.subList(0, limit);
-            List<Integer> expectedIds = expectedTasks.stream().map(TaskResponse::getId).map(Long::intValue).toList();
+            List<Integer> expectedIds = expectedTasks.stream().map(TaskResponse::id).map(Long::intValue).toList();
             Long expectedNextCursor = (long) expectedIds.get(expectedIds.size() - 1);
 
             TaskCursorPage expectedPage = new TaskCursorPage(expectedTasks, expectedNextCursor);
@@ -258,7 +259,7 @@ public class TaskControllerTest {
             List<TaskResponse> expectedTasks = tasks.subList(limit, tasks.size()); // задачи со второй (последней) страницы
             Long nextCursor = null;
             TaskCursorPage expectedPage = new TaskCursorPage(expectedTasks, nextCursor);
-            List<Integer> expectedIds = expectedTasks.stream().map(TaskResponse::getId).map(Long::intValue).toList();
+            List<Integer> expectedIds = expectedTasks.stream().map(TaskResponse::id).map(Long::intValue).toList();
 
 
             when(mockService.getTasksWithCursor(eq(lastId), any(Pageable.class))).thenReturn(expectedPage);
@@ -311,14 +312,16 @@ public class TaskControllerTest {
     public void updateTask_ShouldReturnUpdatedTask_WhenTaskExistsAndRequestParametersAreCorrect() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle("New Title"); // на PATCH запросе меняем только title
+        TaskUpdateRequest request = new TaskUpdateRequest("New Title", null, null);
+        // на PATCH запросе меняем только title
 
-        TaskResponse updatedTask = new TaskResponse();
-        updatedTask.setId(id);
-        updatedTask.setTitle(request.getTitle());
-        updatedTask.setDescription("Old Description");
-        updatedTask.setDone(false);
+        TaskResponse updatedTask = new TaskResponse(
+                id,
+                request.title(),
+                "Old Description",
+                false,
+                LocalDateTime.now()
+                );
 
         when(mockService.updateTask(eq(id), any(TaskUpdateRequest.class))).thenReturn(updatedTask);
 
@@ -329,9 +332,9 @@ public class TaskControllerTest {
                 .content(asJsonString(request)))
                 .andExpect(header().string("Content-Type", "application/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value(request.getTitle()))
-                .andExpect(jsonPath("$.description").value(updatedTask.getDescription()))
-                .andExpect(jsonPath("$.done").value(updatedTask.isDone()))
+                .andExpect(jsonPath("$.title").value(request.title()))
+                .andExpect(jsonPath("$.description").value(updatedTask.description()))
+                .andExpect(jsonPath("$.done").value(updatedTask.done()))
                 .andExpect(jsonPath("$.id").value(id));
     }
 
@@ -339,7 +342,7 @@ public class TaskControllerTest {
     public void updateTask_ShouldReturnProblemDetail_WhenTaskDoesNotExist() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskUpdateRequest request = new TaskUpdateRequest();
+        TaskUpdateRequest request = new TaskUpdateRequest("title", null, null);
         when(mockService.updateTask(eq(id), any(TaskUpdateRequest.class))).
                 thenThrow(new ResourceNotFoundException(String.format("Task with id %d not found", id)));
 
@@ -360,8 +363,7 @@ public class TaskControllerTest {
     public void updateTask_ShouldReturnProblemDetail_WhenNewTitleIsAlreadyInUse() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle("Duplicate title");
+        TaskUpdateRequest request = new TaskUpdateRequest("Duplicate title", null, null);
 
         when(mockService.updateTask(eq(id), any(TaskUpdateRequest.class)))
                 .thenThrow(new ResourceAlreadyExistsException("Can't update task with id " + id + ", title is already in use"));
@@ -383,8 +385,8 @@ public class TaskControllerTest {
     public void updateTask_ShouldReturnProblemDetail_WhenParametersAreInvalid() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskUpdateRequest request = new TaskUpdateRequest();
-        request.setTitle("");
+        TaskUpdateRequest request = new TaskUpdateRequest("", null, null);
+        request.title();
         Map<String, String> errors = new HashMap<>();
         errors.put("title", "title must be between 1 and 255 characters");
 
@@ -442,16 +444,18 @@ public class TaskControllerTest {
     public void removeTask_ShouldReturnRemovedTask_WhenTaskExists() throws Exception {
         // GIVEN
         long id = 1L;
-        TaskResponse response = new TaskResponse();
-        response.setId(id);
-        response.setDone(true);
-        response.setTitle("title");
-        response.setDescription("description");
+        TaskResponse response = new TaskResponse(
+                id,
+                "title",
+                "description",
+                true,
+                LocalDateTime.now()
+                );
+
         when(mockService.removeTaskById(eq(id))).thenReturn(response);
         // WHEN & THEN
         mockMvc.perform(delete("/api/tasks/{id}", id))
                 .andExpect(status().isNoContent())
                 .andExpect(jsonPath("$").doesNotExist());
-
     }
 }

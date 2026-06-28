@@ -35,12 +35,14 @@ public class TaskService {
      * @return TaskResponse объект.
      */
     private TaskResponse toResponse(TaskEntity entity) {
-        TaskResponse response = new TaskResponse();
-        response.setId(entity.getId());
-        response.setTitle(entity.getTitle());
-        response.setDescription(entity.getDescription());
-        response.setDone(entity.isDone());
-        response.setCreatedAt(entity.getCreatedAt());
+        TaskResponse response = new TaskResponse(
+                entity.getId(),
+                entity.getTitle(),
+                entity.getDescription(),
+                entity.isDone(),
+                entity.getCreatedAt()
+                );
+
         return response;
     }
 
@@ -62,14 +64,14 @@ public class TaskService {
 
         TaskEntity creatingEntity = new TaskEntity();
 
-        if (!request.getTitle().isBlank()) {
-            creatingEntity.setTitle(request.getTitle());
+        if (!request.title().isBlank()) {
+            creatingEntity.setTitle(request.title());
         }
-        if (request.getDescription() != null) {
-            creatingEntity.setDescription(request.getDescription());
+        if (request.description() != null) {
+            creatingEntity.setDescription(request.description());
         }
-        if (request.getDone() != null) {
-            creatingEntity.setDone(request.getDone());
+        if (request.done() != null) {
+            creatingEntity.setDone(request.done());
         }
 
         TaskEntity createdEntity;
@@ -109,7 +111,7 @@ public class TaskService {
         Long nextCursor = null;
         if (tasks.size() == pageSize + 1){
             tasks = tasks.subList(0, pageSize);
-            nextCursor = tasks.get(pageSize - 1).getId();
+            nextCursor = tasks.get(pageSize - 1).id();
         }
 
         return new TaskCursorPage(tasks, nextCursor);
@@ -139,19 +141,19 @@ public class TaskService {
         TaskEntity entity = taskRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Task with id " + id + " not found"));
 
-        if (request.getTitle() != null) {
-            if (request.getTitle().isBlank() || request.getTitle().length() > 255) {
+        if (request.title() != null) {
+            if (request.title().isBlank() || request.title().length() > 255) {
                 errors.put("title", "title must be between 1 and 255 characters");
             }
             else {
-                entity.setTitle(request.getTitle());
+                entity.setTitle(request.title());
             }
         }
-        if (request.getDescription() != null) {
-            entity.setDescription(request.getDescription());
+        if (request.description() != null) {
+            entity.setDescription(request.description());
         }
-        if (request.getDone() != null) {
-            entity.setDone(request.getDone());
+        if (request.done() != null) {
+            entity.setDone(request.done());
         }
 
         if (!errors.isEmpty()) {
